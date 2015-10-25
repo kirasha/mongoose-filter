@@ -1,0 +1,23 @@
+{
+  "name": "mongoose-search",
+  "version": "1.0.0",
+  "description": "An opinioned way of handling REST filtering, sorting, pagination with Mongo DB",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha tests"
+  },
+  "keywords": [
+    "mongoose",
+    "rest",
+    "filtering",
+    "sorting",
+    "pagination"
+  ],
+  "author": "diokey",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^2.3.3",
+    "mongoose": "^4.1.10",
+    "should": "^7.1.0"
+  }
+}
