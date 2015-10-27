@@ -6,4 +6,4 @@ More documentation coming soon...
 
 With <3
 
-[https://github.com/diokey](diokey)
+[diokey](https://github.com/diokey)
