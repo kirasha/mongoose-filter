@@ -84,7 +84,19 @@ function filterPlugin(schema, options) {
         output[key] = value;
       } else if (typeof order === 'object') {
         key = Object.keys(order)[0];
-        output[key] = order[key];
+        if (Number.isInteger(order[key])) {
+          output[key] = order[key];
+        } else {
+          var sortOrder = order[key];
+          switch(sortOrder) {
+            case 'desc':
+              output[key] = -1;
+            break;
+            case 'asc':
+            case 'default':
+              output[key] = 1;
+          }
+        }
       }
     });
 
@@ -181,7 +193,7 @@ function filterPlugin(schema, options) {
     conditions.fields           = conditions.fields || [];
     conditions.pagination       = conditions.pagination || {};
     conditions.pagination.page  = conditions.pagination.page || 1;
-    conditions.pagination.size = conditions.pagination.size || 30;
+    conditions.pagination.size  = conditions.pagination.size || 30;
     conditions.filters          = conditions.filters || [];
     conditions.sort             = conditions.sort || [];
     conditions.embed            = conditions.embed || [];

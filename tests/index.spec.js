@@ -214,6 +214,27 @@ describe('Mongoose Search Plugin', function() {
     });
   });
 
+  function sortRoles() {
+    return allRoles.concat().sort(function(a, b) {
+
+      if (a.name === b.name) {
+        if (a.description < b.description) {
+          return 1;
+        }
+        if (a.description > b.description) {
+          return -1;
+        }
+        return 0;
+      }
+      if (a.name < b.name) {
+        return -1;
+      }
+      if (a.name > b.name) {
+        return 1;
+      }
+    });
+  }
+
   it('should sort on specified properties', function(done) {
     var options = {
       sort: ['name','-description']
@@ -221,25 +242,22 @@ describe('Mongoose Search Plugin', function() {
 
     Role.filter(options).then(function(roles) {
       should.exist(roles);
-      var sortedRoles = allRoles.concat().sort(function(a, b) {
+      var sortedRoles = sortRoles();
+      sortedRoles[0].name.should.equal(roles[0].name);
+      sortedRoles[sortedRoles.length - 1].name.should.equal(
+        roles[roles.length - 1].name);
+      done();
+    });
+  });
 
-        if (a.name === b.name) {
-          if (a.description < b.description) {
-            return 1;
-          }
-          if (a.description > b.description) {
-            return -1;
-          }
-          return 0;
-        }
-        if (a.name < b.name) {
-          return -1;
-        }
-        if (a.name > b.name) {
-          return 1;
-        }
-      });
+  it('should sort on specified properties given an object', function(done) {
+    var options = {
+      sort: [{'name': 'asc'},{'description': 'desc'}]
+    };
 
+    Role.filter(options).then(function(roles) {
+      should.exist(roles);
+      var sortedRoles = sortRoles();
       sortedRoles[0].name.should.equal(roles[0].name);
       sortedRoles[sortedRoles.length - 1].name.should.equal(
         roles[roles.length - 1].name);
