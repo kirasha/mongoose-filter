@@ -1,5 +1,5 @@
 {
-  "name": "mongoose-search",
+  "name": "mongoose-filter",
   "version": "1.0.0",
   "description": "An opinioned way of handling REST filtering, sorting, pagination with Mongo DB",
   "main": "index.js",
