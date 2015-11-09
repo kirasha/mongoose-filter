@@ -214,6 +214,23 @@ describe('Mongoose Search Plugin', function() {
     });
   });
 
+  it('should accepts extra fields', function(done) {
+    var options = {
+      fields: ['name', 'description']
+    };
+
+    Role.filter(options, ['-_id', 'active']).then(function(roles) {
+      should.exist(roles);
+      roles.length.should.equal(allRoles.length);
+      var role = roles[0];
+      role.should.have.properties(options.fields);
+      should.not.exist(role.permissions);
+      should.exist(role.active);
+      should.not.exist(role._id);
+      done();
+    });
+  });
+
   function sortRoles() {
     return allRoles.concat().sort(function(a, b) {
 

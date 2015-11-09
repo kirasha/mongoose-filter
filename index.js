@@ -22,9 +22,11 @@ function filterPlugin(schema, options) {
    *
    */
 
-
-  function parseFields(inputs) {
-    return inputs.join(' ');
+  function parseFields(inputs, extraFields) {
+    if (!extraFields || !Array.isArray(extraFields)) {
+      extraFields = [];
+    }
+    return inputs.concat(extraFields).join(' ');
   }
 
   function parseEmbeded(props) {
@@ -177,15 +179,27 @@ function filterPlugin(schema, options) {
     return filter;
   }
 
-  schema.statics.filter = function(conditions, callback) {
-    if (arguments.length < 2) {
+  schema.statics.filter = function(conditions, extraFields, callback) {
+    if (arguments.length < 3) {
+
       if (typeof conditions ==='function') {
+        // scenario filter(callback);
         callback = conditions;
         conditions = {};
+        extraFields = [];
       } else {
-        callback = undefined;
-        if (!conditions) {
-          conditions = {};
+        if (typeof extraFields === 'function') {
+          // scenario filter(conditions, callback);
+          callback = extraFields;
+          extraFields = [];
+        } else {
+          callback = undefined;
+          if (!conditions) {
+            conditions = {};
+          }
+          if (!extraFields) {
+            extraFields = [];
+          }
         }
       }
     }
@@ -200,7 +214,7 @@ function filterPlugin(schema, options) {
 
     var query = null;
 
-    if(! conditions.filters.length) {
+    if(! conditions.filters.length && !extraFields.length) {
       query = this.find();
     } else {
       var filters = parseFilters(conditions.filters);
@@ -208,7 +222,7 @@ function filterPlugin(schema, options) {
     }
 
     if (conditions.fields) {
-      var fields = parseFields(conditions.fields);
+      var fields = parseFields(conditions.fields, extraFields);
       query.select(fields);
     }
 
