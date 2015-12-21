@@ -177,7 +177,7 @@ describe('Mongoose Search Plugin', function() {
       should.exist(roles);
       roles.length.should.equal(allRoles.length);
       done();
-    });
+    }).catch(done);
   });
 
   it('should return only paged result', function(done) {
@@ -477,6 +477,24 @@ describe('Mongoose Search Plugin', function() {
       Role.filter(filterObject).then(function(roles) {
         should.exist(roles);
         roles.length.should.equal(3);
+        done();
+      });
+    });
+
+    it('should be able to filter with "not in" operator', function(done) {
+      var filterObject = {
+        'filters': [
+          {
+            key: 'name',
+            operator: 'not in',
+            value: [allRoles[0].name, allRoles[4].name, allRoles[9].name]
+          }
+        ]
+      };
+
+      Role.filter(filterObject).then(function(roles) {
+        should.exist(roles);
+        roles.length.should.equal(allRoles.length - 3);
         done();
       });
     });

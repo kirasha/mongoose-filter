@@ -152,9 +152,17 @@ function filterPlugin(schema, options) {
           break;
         case 'in':
           if(!Array.isArray(input.value)) {
-            throw new Error('like operator requires an array of values');
+            throw new Error('in operator requires an array of values');
           }
           filter[input.key] = {$in: input.value};
+          break;
+        case 'not in':
+          if(!Array.isArray(input.value)) {
+            throw new Error('not in Operator requires an array of values');
+          }
+          var notIn = {};
+          notIn.$not = {$in: input.value};
+          filter[input.key] = notIn;
           break;
         case 'between':
           if(!Array.isArray(input.value) || input.value.length !== 2 ) {
