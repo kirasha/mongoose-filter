@@ -145,6 +145,8 @@ function generateData() {
 
 before(function(done) {
   connectDB()
+  .then(Role.remove({}))
+  .then(Permission.remove({}))
   .then(generateData)
   .then(done);
 });
@@ -172,12 +174,12 @@ describe('Mongoose Search Plugin', function() {
     });
   });
 
-  it('should return a promise if not callback was passed', function(done) {
+  it('should return a promise if no callback was passed', function(done) {
     Role.filter().then(function(roles) {
       should.exist(roles);
       roles.length.should.equal(allRoles.length);
       done();
-    });
+    }).catch(done);
   });
 
   it('should return only paged result', function(done) {
@@ -210,23 +212,6 @@ describe('Mongoose Search Plugin', function() {
       role.should.have.properties(options.fields);
       should.not.exist(role.permissions);
       should.not.exist(role.active);
-      done();
-    });
-  });
-
-  it('should accepts extra fields', function(done) {
-    var options = {
-      fields: ['name', 'description']
-    };
-
-    Role.filter(options, ['-_id', 'active']).then(function(roles) {
-      should.exist(roles);
-      roles.length.should.equal(allRoles.length);
-      var role = roles[0];
-      role.should.have.properties(options.fields);
-      should.not.exist(role.permissions);
-      should.exist(role.active);
-      should.not.exist(role._id);
       done();
     });
   });
@@ -481,6 +466,24 @@ describe('Mongoose Search Plugin', function() {
       });
     });
 
+    it('should be able to filter with "not in" operator', function(done) {
+      var filterObject = {
+        'filters': [
+          {
+            key: 'name',
+            operator: 'not in',
+            value: [allRoles[0].name, allRoles[4].name, allRoles[9].name]
+          }
+        ]
+      };
+
+      Role.filter(filterObject).then(function(roles) {
+        should.exist(roles);
+        roles.length.should.equal(allRoles.length - 3);
+        done();
+      });
+    });
+
     it('should be able to filter with "between" operator', function(done) {
 
       var limitLeft = Math.min(allRoles[3].points, allRoles[6].points);
@@ -564,6 +567,8 @@ describe('Mongoose Search Plugin', function() {
 
   });
 
+  var expectedDocument;
+
   describe('Embed documents', function() {
     it('should populate specified documents', function(done) {
       var embeded = ['permissions'];
@@ -579,20 +584,50 @@ describe('Mongoose Search Plugin', function() {
       });
     });
 
-    it('should populate only fields of specified in the documents', function(done) {
+    it('should populate only fields specified in the documents', function(done) {
       var embeded = ['permissions.name','permissions.description'];
 
       Role.filter({'embed': embeded}, function(err, roles) {
         should.exist(roles);
         roles[0].should.have.property('permissions');
+        expectedDocument = roles[0];
         var permissions = roles[0].permissions;
         permissions.should.be.an.Array();
         var permission = permissions[0];
         permission.should.have.properties(['name','description']);
+        permission.toJSON().should.not.have.properties(['active']);
         done();
       });
     });
+  });
 
+  describe('Single documents', function() {
+    it('should find a single document given an id', function(done) {
+      Role.filter(expectedDocument._id).then(function(role) {
+        should.exist(role);
+        role.should.be.Object();
+        expectedDocument._id.should.deepEqual(role._id);
+        expectedDocument.name.should.equal(role.name);
+        done();
+      }).catch(function(err) {
+        done(err);
+      });
+    });
+
+    it('should embed fields specified in the documents', function(done) {
+      var embeded = ['permissions.name','permissions.description'];
+      Role.filter(expectedDocument._id, {'embed': embeded})
+      .then(function(role) {
+        should.exist(role);
+        role.should.be.Object();
+        role.should.have.properties(Object.keys(expectedDocument));
+        role.permissions[0].toJSON().should.deepEqual(
+          expectedDocument.permissions[0].toJSON());
+        done();
+      }).catch(function(err) {
+        done(err);
+      });
+    });
   });
 
 });
