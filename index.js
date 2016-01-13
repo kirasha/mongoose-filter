@@ -6,7 +6,7 @@
  * MIT License
  */
 
-function filterPlugin(schema, options) {
+function filterPlugin(schema) {
 
   /*
    * options: {
@@ -22,11 +22,13 @@ function filterPlugin(schema, options) {
    *
    */
 
-  function parseFields(inputs, extraFields) {
-    if (!extraFields || !Array.isArray(extraFields)) {
-      extraFields = [];
-    }
-    return inputs.concat(extraFields).join(' ');
+
+  function isValidMongooseId(id) {
+    return /^[a-fA-F0-9]{24}$/.test(id);
+  }
+
+  function parseFields(inputs) {
+    return inputs.join(' ');
   }
 
   function parseEmbeded(props) {
@@ -38,7 +40,7 @@ function filterPlugin(schema, options) {
       return;
     }
 
-    var docMap={};
+    var docMap = {};
     var docum = {};
     docum.fields = [];
 
@@ -70,9 +72,9 @@ function filterPlugin(schema, options) {
     var value;
     var sortSign;
     inputs.forEach(function(order) {
-      key='';
-      value='';
-      sortSign='';
+      key = '';
+      value = '';
+      sortSign = '';
 
       if (typeof order === 'string') {
         sortSign = order.substr(0,1);
@@ -90,7 +92,7 @@ function filterPlugin(schema, options) {
           output[key] = order[key];
         } else {
           var sortOrder = order[key];
-          switch(sortOrder) {
+          switch (sortOrder) {
             case 'desc':
               output[key] = -1;
             break;
@@ -111,13 +113,13 @@ function filterPlugin(schema, options) {
     var regex;
 
     inputs.forEach(function(input) {
-      switch(input.operator) {
+      switch (input.operator) {
         case '==':
           filter[input.key] = input.value;
-          break;
+        break;
         case '!=':
           filter[input.key] = {$ne: input.value};
-          break;
+        break;
         case '~':
           try {
             regex = new RegExp(input.value, 'i');
@@ -127,51 +129,51 @@ function filterPlugin(schema, options) {
           if (regex) {
             filter[input.key] = regex;
           }
-          break;
+        break;
         case '!~':
           try {
-            regex = new RegExp('^((?!'+input.value+').)*$', 'i');
+            regex = new RegExp('^((?!' + input.value + ').)*$', 'i');
           } catch (err) {
             throw new Error('Invalid RegExp' + input.value);
           }
           if (regex) {
             filter[input.key] = regex;
           }
-          break;
+        break;
         case '<':
           filter[input.key] = {$lt: input.value};
-          break;
+        break;
         case '<=':
           filter[input.key] = {$lte: input.value};
-          break;
+        break;
         case '>':
           filter[input.key] = {$gt: input.value};
-          break;
+        break;
         case '>=':
           filter[input.key] = {$gte: input.value};
-          break;
+        break;
         case 'in':
-          if(!Array.isArray(input.value)) {
+          if (!Array.isArray(input.value)) {
             throw new Error('in operator requires an array of values');
           }
           filter[input.key] = {$in: input.value};
-          break;
+        break;
         case 'not in':
-          if(!Array.isArray(input.value)) {
+          if (!Array.isArray(input.value)) {
             throw new Error('not in Operator requires an array of values');
           }
           var notIn = {};
           notIn.$not = {$in: input.value};
           filter[input.key] = notIn;
-          break;
+        break;
         case 'between':
-          if(!Array.isArray(input.value) || input.value.length !== 2 ) {
+          if (!Array.isArray(input.value) || input.value.length !== 2) {
             throw new Error('Expected 2 values for between Operator');
           }
           filter[input.key] = {$gte: input.value[0], $lte: input.value[1]};
-          break;
+        break;
         case 'not between':
-          if(!Array.isArray(input.value) || input.value.length !== 2 ) {
+          if (!Array.isArray(input.value) || input.value.length !== 2) {
             throw new Error('Expected 2 values for not between Operator');
           }
           var lt = {};
@@ -179,7 +181,7 @@ function filterPlugin(schema, options) {
           lt[input.key] = {$lt: input.value[0]};
           gt[input.key] = {$gt: input.value[1]};
           filter.$or = [lt , gt];
-          break;
+        break;
         default: throw new Error('Not Supported Operator' + input.operator);
       }
     });
@@ -187,26 +189,32 @@ function filterPlugin(schema, options) {
     return filter;
   }
 
-  schema.statics.filter = function(conditions, extraFields, callback) {
+  schema.statics.filter = function(id, conditions, callback) {
+    conditions = conditions || {};
     if (arguments.length < 3) {
-
-      if (typeof conditions ==='function') {
-        // scenario filter(callback);
-        callback = conditions;
+      //Doc.filter(callback);
+      if (typeof id === 'function') {
+        // Doc.filter(callback)
+        callback = id;
         conditions = {};
-        extraFields = [];
+        id = undefined;
       } else {
-        if (typeof extraFields === 'function') {
-          // scenario filter(conditions, callback);
-          callback = extraFields;
-          extraFields = [];
-        } else {
-          callback = undefined;
-          if (!conditions) {
+        if (typeof conditions === 'function') {
+          callback = conditions;
+          if (id && !isValidMongooseId(id)) {
+            //Doc.filter({}, callback);
+            conditions = id;
+            id = undefined;
+          } else {
+            //Doc.filter(123, callback);
             conditions = {};
           }
-          if (!extraFields) {
-            extraFields = [];
+        } else {
+          //Doc.filter(123);
+          //Doc.filter({});
+          if (id && !isValidMongooseId(id)) {
+            conditions = id;
+            id = undefined;
           }
         }
       }
@@ -221,16 +229,22 @@ function filterPlugin(schema, options) {
     conditions.embed            = conditions.embed || [];
 
     var query = null;
+    var isCollection = !id;
+    var identifier = conditions.indifier || {_id: id};
 
-    if(! conditions.filters.length && !extraFields.length) {
-      query = this.find();
+    if (!isCollection) {
+      query = this.findOne(identifier);
     } else {
-      var filters = parseFilters(conditions.filters);
-      query = this.find(filters);
+      if (!conditions.filters.length) {
+        query = this.find();
+      } else {
+        var filters = parseFilters(conditions.filters);
+        query = this.find(filters);
+      }
     }
 
     if (conditions.fields) {
-      var fields = parseFields(conditions.fields, extraFields);
+      var fields = parseFields(conditions.fields);
       query.select(fields);
     }
 
@@ -238,7 +252,7 @@ function filterPlugin(schema, options) {
       var docs = parseEmbeded(conditions.embed);
       if (docs) {
         docs.forEach(function(doc) {
-          if(doc.fields) {
+          if (doc.fields) {
             query.populate(doc.doc, doc.fields.join(' '));
           } else {
             query.populate(doc.doc);
@@ -247,16 +261,19 @@ function filterPlugin(schema, options) {
       }
     }
 
-    if (conditions.sort) {
+    // sort only collections
+    if (conditions.sort && isCollection) {
       var sortOrder = parseSort(conditions.sort);
       query.sort(sortOrder);
     }
 
-    query.limit(conditions.pagination.size);
+    if (isCollection) {
+      query.limit(conditions.pagination.size);
+      var offset =
+        (conditions.pagination.page - 1) * conditions.pagination.size;
 
-    var offset = (conditions.pagination.page - 1) * conditions.pagination.size;
-
-    query.skip(offset);
+      query.skip(offset);
+    }
 
     if (!callback) {
       return query;
