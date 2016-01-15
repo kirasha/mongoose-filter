@@ -628,6 +628,22 @@ describe('Mongoose Search Plugin', function() {
         done(err);
       });
     });
+
+    it('should be able to filter fields', function (done) {
+      var options = {
+        fields: ['name', 'description']
+      };
+
+      Role.filter(expectedDocument._id, options).then(function(role) {
+        should.exist(role);
+        role.should.be.Object();
+        role.should.have.properties(options.fields);
+        should.not.exist(role.permissions);
+        should.not.exist(role.active);
+        done();
+      });
+
+    });
   });
 
 });
