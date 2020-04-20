@@ -17,7 +17,7 @@
   "license": "MIT",
   "devDependencies": {
     "mocha": "^2.3.3",
-    "mongoose": "^4.1.10",
+    "mongoose": "^5.9.9",
     "should": "^7.1.0"
   }
 }
